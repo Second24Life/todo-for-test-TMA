@@ -1,7 +1,8 @@
-import { useState, type FC, useRef } from "react";
+import { useState, type FC, useRef, useEffect } from "react";
 import { List, Section, Cell, Button, Input } from "@telegram-apps/telegram-ui";
 
 import { Page } from "@/components/Page.tsx";
+import { useUser } from "@/components/UserContext";
 
 interface Todo {
   id: number;
@@ -9,19 +10,29 @@ interface Todo {
 }
 
 export const TodoPage: FC = () => {
+  const { user } = useUser();
   const [todos, setTodos] = useState<Todo[]>([]);
   const [input, setInput] = useState("");
   const [editId, setEditId] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleAddOrEdit = () => {
+  const handleAddOrEdit = async () => {
     const value = input.trim();
     if (!value) return;
     if (editId !== null) {
       setTodos((todos) => todos.map((todo) => (todo.id === editId ? { ...todo, text: value } : todo)));
       setEditId(null);
     } else {
-      setTodos((todos) => [...todos, { id: Date.now(), text: value }]);
+      const response = await fetch("http://209.38.220.225:8080/api/todos/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ title: value, description: value, user_id: user?.id }),
+      });
+      const data = await response.json();
+      console.log(data, 'data');
+      setTodos((todos) => [...todos, data]);
     }
     setInput("");
     inputRef.current?.focus();
@@ -40,6 +51,23 @@ export const TodoPage: FC = () => {
       setInput("");
     }
   };
+
+  useEffect(() => {
+    const fetchTodos = async () => {
+      const response = await fetch("http://209.38.220.225:8080/api/todos" + `?user_id=${user?.id}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      const data = await response.json();
+      console.log(data, 'data');
+      if (data && data.length > 0) {
+        setTodos(data);
+      }
+    };
+    fetchTodos();
+  }, []);
 
   return (
     <Page>

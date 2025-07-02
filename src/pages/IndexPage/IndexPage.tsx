@@ -1,15 +1,45 @@
 import { Section, Cell, List, Button } from "@telegram-apps/telegram-ui";
-import type { FC } from "react";
+import { useEffect, type FC } from "react";
 
 import { Link } from "@/components/Link/Link.tsx";
 import { Page } from "@/components/Page.tsx";
+import { initDataState as _initDataState, useSignal } from "@telegram-apps/sdk-react";
+import { useUser } from "@/components/UserContext";
 
 const tg = (window as any).Telegram?.WebApp;
 
 export const IndexPage: FC = () => {
+  const initDataState = useSignal(_initDataState);
+  const { setUser } = useUser();
+
+  useEffect(() => {
+    const auth = async () => {
+      try {
+        const response = await fetch("http://209.38.220.225:8080/api/auth", {
+          method: "POST",
+          body: JSON.stringify({
+            id: initDataState?.user?.id || '',
+            username: initDataState?.user?.username || '',
+            first_name: initDataState?.user?.first_name || '',
+            last_name: initDataState?.user?.last_name || '',
+          }),
+        });
+        const data = await response.json();
+        console.log(data, 'success');
+      } catch (error) {
+        console.log(error, 'error');
+      }
+    };
+    if (initDataState?.user) {
+      setUser(initDataState.user);
+      auth();
+    }
+  }, [initDataState, setUser]);
+
   const onClose = () => {
     tg?.close();
   };
+
   return (
     <Page back={false}>
       <List>
